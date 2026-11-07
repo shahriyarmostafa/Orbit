@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Orbit - Project Proposal</title>
+<style>
+  body {
+    font-family: 'Arial', sans-serif;
+    color: #1a1a1a;
+    line-height: 1.6;
+    max-width: 850px;
+    margin: 40px auto;
+    padding: 20px;
+  }
+  h1 { color: #1e3a8a; font-size: 26pt; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 6px; }
+  h2 { color: #2563eb; font-size: 16pt; margin-top: 24pt; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }
+  h3 { color: #334155; font-size: 13pt; margin-top: 16pt; }
+  p, li { font-size: 11pt; color: #334155; }
+  table { width: 100%; border-collapse: collapse; margin: 16pt 0; font-size: 10.5pt; }
+  th, td { border: 1px solid #cbd5e1; padding: 10px 12px; text-align: left; }
+  th { background-color: #f1f5f9; color: #0f172a; font-weight: bold; }
+  tr:nth-child(even) { background-color: #f8fafc; }
+  code, pre { font-family: 'Consolas', monospace; background-color: #f1f5f9; padding: 3px 6px; border-radius: 4px; font-size: 10pt; }
+  pre { padding: 14px; border: 1px solid #e2e8f0; overflow-x: auto; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 9pt; font-weight: bold; }
+  .badge-completed { background: #dcfce7; color: #15803d; }
+  .badge-upcoming { background: #e0e7ff; color: #4338ca; }
+  hr { border: 0; height: 1px; background: #e2e8f0; margin: 24pt 0; }
+</style>
+</head>
+<body>
+
+<h1>Project Proposal: Orbit</h1>
+<p><strong>A Modern, Fluid Personal Productivity & Task Management Web Application</strong></p>
+
+<hr>
+
+<h2>1. Executive Summary</h2>
+<p><strong>Orbit</strong> is a personal productivity web application designed to help users streamline daily task management, minimize cognitive clutter, and keep track of daily goals with ease. Built with <strong>PHP (Object-Oriented Programming)</strong>, <strong>MySQL</strong>, <strong>Bootstrap 5.3</strong>, and <strong>modern JavaScript (ES6+ / Fetch API)</strong>, Orbit combines clean relational data architecture with a fluid, dark-mode-first aesthetic.</p>
+<p>In addition to core features—such as user authentication, category tagging, priority scoring, 10-item pagination, instant task toggling via AJAX, and CSV exporting—Orbit introduces a <strong>Smart Reminder & Alarm System</strong> that triggers timely browser notifications and audible alarms when tasks reach their scheduled deadlines.</p>
+
+<hr>
+
+<h2>2. Problem Statement & Motivation</h2>
+<p>Modern professionals and students face significant daily task overload. Most task trackers either suffer from:</p>
+<ol>
+  <li><strong>Excessive Complexity:</strong> Bloated enterprise tools (e.g., Jira, ClickUp) that require excessive configuration and induce friction for daily personal tracking.</li>
+  <li><strong>Lack of Instant Feedback:</strong> Traditional server-rendered web applications that reload the entire page on every interaction, breaking focus.</li>
+  <li><strong>Missing Timely Alerts:</strong> Simple to-do apps record due dates but fail to actively alert the user when a deadline is imminent, resulting in forgotten deadlines.</li>
+  <li><strong>Poor Aesthetic & Dark Mode Support:</strong> Inconsistent UI styling that strains the eyes during night work sessions.</li>
+</ol>
+<p><strong>Orbit</strong> solves these problems by providing a lightweight, responsive, and secure platform with fluid micro-animations, real-time background updates, and audio-visual reminders.</p>
+
+<hr>
+
+<h2>3. Project Objectives</h2>
+<ul>
+  <li><strong>Robust OOP Architecture:</strong> Implement clean PHP 8 Object-Oriented principles (encapsulation, single-responsibility models, PDO singleton connection, prepared statements).</li>
+  <li><strong>Strict Data Integrity & Ownership:</strong> Ensure users can strictly access, edit, toggle, and delete only their own tasks (<code>user_id</code> ownership validation).</li>
+  <li><strong>Zero-Flicker Interactivity:</strong> Utilize the JavaScript <code>Fetch API</code> for asynchronous task status updates, deletion, and dark mode toggling.</li>
+  <li><strong>Smart Reminder & Alarm Engine:</strong> Equip Orbit with visual banner/toast alerts and auditory alarms (using the Web Audio API / HTML5 Audio and Notification API) to alert users to pending and overdue tasks.</li>
+  <li><strong>Actionable Insights & Data Portability:</strong> Provide a real-time progress dashboard (total vs. completed metrics) and one-click CSV export of completed tasks for external reporting.</li>
+</ul>
+
+<hr>
+
+<h2>4. System Features & Specifications</h2>
+<h3>4.1 Authentication & Profile Security</h3>
+<ul>
+  <li><strong>Registration & Validation:</strong> Enforces sanitized inputs, unique username/email verification, and minimum password lengths.</li>
+  <li><strong>Cryptographic Security:</strong> Employs PHP's native <code>password_hash()</code> (BCRYPT / Argon2) and <code>password_verify()</code>.</li>
+  <li><strong>Session Protection:</strong> Hardened against session fixation attacks via <code>session_regenerate_id(true)</code>.</li>
+</ul>
+
+<h3>4.2 Task Management Engine</h3>
+<ul>
+  <li><strong>Task Attributes:</strong> Title, detailed description, due date/time, category, and priority (Low, Medium, High).</li>
+  <li><strong>Relational Categorization:</strong> Global default categories (Work, Personal, Study, Health) plus user-defined custom categories with color palettes.</li>
+  <li><strong>Ownership Verification:</strong> Database-level and controller-level security verifying <code>tasks.user_id = session.user_id</code> before any mutating action.</li>
+</ul>
+
+<h3>4.3 Search, Filtering & Pagination</h3>
+<ul>
+  <li><strong>Search Engine:</strong> Real-time / form search matching task titles and descriptions using SQL parameter-bound <code>LIKE</code> queries.</li>
+  <li><strong>Multi-Filter:</strong> Filter by specific category and status (All, Pending, Completed).</li>
+  <li><strong>Preserved Pagination:</strong> 10-item pagination with query string persistence across page shifts.</li>
+</ul>
+
+<h3>4.4 Smart Reminder & Notification System (New Key Feature)</h3>
+<ul>
+  <li><strong>Audio Chime & Visual Flash:</strong> When a task's scheduled due time is reached, Orbit plays a soft audio alarm chime and visually highlights the task card.</li>
+  <li><strong>Web Notifications API:</strong> Integrated desktop/browser push notifications that inform the user even if they are working in another tab or application.</li>
+  <li><strong>Reminder Thresholds:</strong> Configurable triggers (at due time, 15 minutes before deadline, snooze option for 5/10 minutes).</li>
+</ul>
+
+<h3>4.5 UI/UX & Dark Mode Customization</h3>
+<ul>
+  <li><strong>Glassmorphic Aesthetic:</strong> Ambient floating glow orbs, frosted glass containers (<code>backdrop-filter: blur</code>), and micro-interactions.</li>
+  <li><strong>Persistent Dark Mode:</strong> User preference saved directly in MySQL (<code>users.dark_mode</code>) and applied synchronously using Bootstrap 5.3's <code>data-bs-theme</code>.</li>
+</ul>
+
+<h3>4.6 Analytics & Data Export</h3>
+<ul>
+  <li><strong>Dashboard Stats:</strong> Real-time calculation of Total Tasks, Pending Tasks, Completed Tasks, and Percentage Completion.</li>
+  <li><strong>CSV Data Export:</strong> Single-click export of finished milestones encoded with UTF-8 BOM for Microsoft Excel and Google Sheets compatibility.</li>
+</ul>
+
+<hr>
+
+<h2>5. Technology Stack</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Layer</th>
+      <th>Technology</th>
+      <th>Justification</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Backend Language</strong></td>
+      <td>PHP 8.2+</td>
+      <td>Native OOP support, reliable server-side rendering, and low hosting overhead.</td>
+    </tr>
+    <tr>
+      <td><strong>Database</strong></td>
+      <td>MySQL 8.0 / MariaDB</td>
+      <td>Relational integrity, foreign key cascading, and indexed search queries.</td>
+    </tr>
+    <tr>
+      <td><strong>Frontend Framework</strong></td>
+      <td>Bootstrap 5.3</td>
+      <td>Responsive grid, accessible utilities, native CSS custom variables, and dark mode engine.</td>
+    </tr>
+    <tr>
+      <td><strong>Typography & Icons</strong></td>
+      <td>Plus Jakarta Sans & Bootstrap Icons</td>
+      <td>Modern tech aesthetic and clean vector icon library.</td>
+    </tr>
+    <tr>
+      <td><strong>Client Scripting</strong></td>
+      <td>Vanilla JavaScript (ES6+)</td>
+      <td>Native <code>Fetch API</code> for AJAX, <code>Web Audio API</code> for alarms, and <code>Notification API</code> for push prompts without heavy dependencies.</td>
+    </tr>
+    <tr>
+      <td><strong>Local Environment</strong></td>
+      <td>XAMPP (Apache, MySQL, PHP)</td>
+      <td>Standardized, cross-platform local development environment.</td>
+    </tr>
+    <tr>
+      <td><strong>Version Control</strong></td>
+      <td>Git & GitHub</td>
+      <td>Remote code backup, version tracking, and release management.</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2>6. Database Architecture</h2>
+<p>The system utilizes 3 normalized relational tables with clean foreign keys, cascading deletes, and search indexes. To support the upcoming <strong>Smart Reminder & Alarm System</strong>, the <code>tasks</code> table includes planned columns (<code>due_time</code>, <code>reminder_time</code>, <code>reminder_sent</code>) alongside existing fields.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Table</th>
+      <th>Primary Columns & Keys</th>
+      <th>Purpose & Relationships</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>users</code></td>
+      <td><code>id (PK)</code>, <code>username (UK)</code>, <code>email (UK)</code>, <code>password_hash</code>, <code>dark_mode</code>, <code>created_at</code></td>
+      <td>Stores user authentication credentials, session identification, and UI dark mode preference.</td>
+    </tr>
+    <tr>
+      <td><code>categories</code></td>
+      <td><code>id (PK)</code>, <code>user_id (FK - Nullable)</code>, <code>name</code>, <code>color</code>, <code>created_at</code></td>
+      <td>Classifies tasks. Global categories have <code>user_id = NULL</code>; user custom categories link to their owner.</td>
+    </tr>
+    <tr>
+      <td><code>tasks</code></td>
+      <td><code>id (PK)</code>, <code>user_id (FK)</code>, <code>category_id (FK)</code>, <code>title</code>, <code>description</code>, <code>priority</code>, <code>is_completed</code>, <code>due_date</code>, <code>due_time</code>, <code>reminder_time</code>, <code>reminder_sent</code></td>
+      <td>Core task records with strict ownership, category link, priority level, completion flag, and alarm triggers.</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2>7. Implementation Roadmap & Milestones</h2>
+<ul>
+  <li><span class="badge badge-completed">Completed</span> <strong>Phase 1 (Milestones 1 & 2):</strong> Core database architecture, PDO singleton connection, secure registration/login, glassmorphic UI overhaul with fluid CSS animations, and GitHub sync.</li>
+  <li><span class="badge badge-completed">Completed</span> <strong>Phase 2 (Milestones 3, 4 & 5):</strong> Task OOP model, strict user-ownership security checks, search engine, category and status filtering, 10-item pagination, AJAX completion toggling, and live dashboard metrics.</li>
+  <li><span class="badge badge-upcoming">Next Up</span> <strong>Phase 3 (Milestone 6 - Reminder & Alarm Engine):</strong> Adding <code>due_time</code> / <code>reminder_time</code> columns, client-side JS interval scheduler, native Web Audio API alarm synthesizer, desktop Web Notifications API prompts, and status tags (<em>Due in 15 mins</em>, <em>Due Today</em>, <em>Overdue</em>).</li>
+  <li><span class="badge badge-upcoming">Upcoming</span> <strong>Phase 4 (Milestone 7):</strong> Completed task CSV export optimization, cross-browser compatibility verification, SQL/XSS security hardening audits, and deployment documentation.</li>
+</ul>
+
+<hr>
+
+<h2>8. Potential Risks & Mitigation Strategies</h2>
+<table>
+  <thead>
+    <tr>
+      <th>Risk</th>
+      <th>Impact</th>
+      <th>Mitigation Strategy</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>Browser Audio Autoplay Policies</strong></td>
+      <td>Audio chime blocked if user has not interacted with the page yet.</td>
+      <td>Prompt an initial sound permission toggle or trigger audio initialization on the user's first click anywhere on the dashboard.</td>
+    </tr>
+    <tr>
+      <td><strong>Tab Sleeping / Background Inactivity</strong></td>
+      <td>Browser throttling timers when the tab is hidden.</td>
+      <td>Leverage the <code>Page Visibility API</code> (<code>document.visibilityState</code>) to trigger immediate delta-checks upon refocusing.</td>
+    </tr>
+    <tr>
+      <td><strong>SQL Injection & XSS</strong></td>
+      <td>Unauthorized data access or defacement.</td>
+      <td>100% prepared PDO statements with bound parameters; HTML-escaping (<code>htmlspecialchars</code>) on all rendered user outputs.</td>
+    </tr>
+    <tr>
+      <td><strong>Unauthorized Action Tampering</strong></td>
+      <td>Malicious requests editing someone else's task.</td>
+      <td>Explicit user ownership verification (<code>WHERE id = :task_id AND user_id = :session_user_id</code>) executed at the SQL layer for all modifications.</td>
+    </tr>
+  </tbody>
+</table>
+
+<hr>
+
+<h2>9. Conclusion</h2>
+<p><strong>Orbit</strong> delivers a lightweight, secure, and visually appealing personal productivity ecosystem. By combining high-performance PHP OOP with zero-page-reload AJAX interactions, persistent user personalization, and an automated reminder/alarm mechanism, Orbit ensures users stay on top of daily tasks without cognitive clutter.</p>
+
+</body>
+</html>
