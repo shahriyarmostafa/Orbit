@@ -123,7 +123,7 @@ erDiagram
 
     CATEGORIES {
         int id PK
-        int user_id FK "Nullable (NULL = system default)"
+        int user_id FK "Nullable - global default if NULL"
         varchar name
         varchar color
         datetime created_at
@@ -135,7 +135,7 @@ erDiagram
         int category_id FK "Nullable"
         varchar title
         text description
-        enum priority "low, medium, high"
+        string priority "low medium or high"
         tinyint is_completed
         datetime due_date
         datetime reminder_time
@@ -232,3 +232,4 @@ flowchart TD
 ## 10. Conclusion
 
 **Orbit** delivers a lightweight, secure, and visually appealing personal productivity ecosystem. By combining high-performance PHP OOP with zero-page-reload AJAX interactions, persistent user personalization, and an automated reminder/alarm mechanism, Orbit ensures users stay on top of daily tasks without cognitive clutter.
+
