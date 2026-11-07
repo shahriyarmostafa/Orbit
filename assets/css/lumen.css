@@ -1,0 +1,34 @@
+/* Orbit Interactive Cursor Lumen Spotlight Effect */
+.cursor-lumen-spotlight {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 550px;
+    height: 550px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0;
+    filter: blur(60px);
+    will-change: transform, opacity;
+    transition: opacity 0.4s ease;
+}
+
+[data-bs-theme="dark"] .cursor-lumen-spotlight {
+    background: radial-gradient(
+        circle,
+        rgba(99, 102, 241, 0.22) 0%,
+        rgba(168, 85, 247, 0.12) 35%,
+        rgba(6, 182, 212, 0.04) 60%,
+        transparent 75%
+    );
+}
+
+[data-bs-theme="light"] .cursor-lumen-spotlight {
+    background: radial-gradient(
+        circle,
+        rgba(99, 102, 241, 0.14) 0%,
+        rgba(168, 85, 247, 0.08) 35%,
+        transparent 70%
+    );
+}
