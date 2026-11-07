@@ -103,7 +103,7 @@ Modern professionals and students face significant daily task overload. Most tas
 
 ## 6. Database Architecture
 
-The system utilizes 3 normalized relational tables with clean foreign keys and indexes:
+The system utilizes 3 normalized relational tables with clean foreign keys, cascading deletes, and search indexes. To support the upcoming **Smart Reminder & Alarm System**, the `tasks` table includes planned columns (`due_time`, `reminder_time`, `reminder_sent`) alongside existing fields.
 
 ```mermaid
 erDiagram
@@ -116,7 +116,7 @@ erDiagram
         varchar username UK
         varchar email UK
         varchar password_hash
-        tinyint dark_mode
+        tinyint dark_mode "Default 0"
         datetime created_at
         datetime updated_at
     }
@@ -125,22 +125,23 @@ erDiagram
         int id PK
         int user_id FK "Nullable - global default if NULL"
         varchar name
-        varchar color
+        varchar color "Bootstrap color token"
         datetime created_at
     }
 
     TASKS {
         int id PK
         int user_id FK
-        int category_id FK "Nullable"
+        int category_id FK "Nullable - on delete set null"
         varchar title
-        text description
+        text description "Nullable"
         string priority "low medium or high"
-        tinyint is_completed
-        datetime due_date
-        datetime reminder_time
-        tinyint reminder_sent
-        datetime completed_at
+        tinyint is_completed "Default 0"
+        date due_date "Scheduled date"
+        time due_time "Scheduled time for alarm"
+        datetime reminder_time "Calculated alert trigger"
+        tinyint reminder_sent "Default 0"
+        datetime completed_at "Nullable"
         datetime created_at
         datetime updated_at
     }
@@ -206,15 +207,15 @@ flowchart TD
 ```
 
 ### Timeline Breakdown:
-- **Phase 1 (Completed)**: Core database architecture, PDO singleton, secure registration/login, glassmorphic UI overhaul, GitHub sync.
-- **Phase 2 (Completed)**: Task OOP model, strict user-ownership validations, filter toolbar, 10-item pagination, CSV export, AJAX completion toggle.
-- **Phase 3 (Next Up - Reminder System)**:
-  - Add `due_time` / `reminder_time` column to tasks.
+- **Phase 1 (Completed - Milestones 1 & 2)**: Core database architecture, PDO singleton connection, secure registration/login, glassmorphic UI overhaul with fluid CSS animations, and GitHub sync.
+- **Phase 2 (Completed - Milestones 3, 4 & 5)**: Task OOP model, strict user-ownership security checks, search engine, category and status filtering, 10-item pagination, AJAX completion toggling, and live dashboard metrics.
+- **Phase 3 (Next Up - Milestone 6: Reminder & Alarm Engine)**:
+  - Add `due_time` and `reminder_time` columns to the `tasks` table.
   - Implement client-side JavaScript interval checker (`setInterval`).
-  - Audio tone synthesizer using `Web Audio API` (zero external MP3 dependency) or bundled soft chime.
-  - Integration with the browser's `Notification.requestPermission()` to alert users when inactive.
-  - Due status tags: *"Due in 15 mins"*, *"Due Today"*, and *"Overdue"*.
-- **Phase 4 (Final Polish)**: Cross-browser testing, code cleanup, and deployment documentation.
+  - Synthesize gentle audio chimes via the native `Web Audio API` (no third-party MP3 reliance).
+  - Integrate browser desktop push alerts using `Notification.requestPermission()`.
+  - Dynamic due status tags: *"Due in 15 mins"*, *"Due Today"*, and *"Overdue"*.
+- **Phase 4 (Final Polish - Milestone 7)**: Completed task CSV export optimization, cross-browser compatibility verification, SQL/XSS security hardening audits, and deployment documentation.
 
 ---
 
