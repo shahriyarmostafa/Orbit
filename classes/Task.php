@@ -1,7 +1,8 @@
 <?php
 /**
  * Task Model
- * Handles all task operations with strict user-ownership validation
+ * Handles all task operations with strict user-ownership validation,
+ * timezone-aware reminder calculations, and snooze lifecycle.
  */
 
 require_once __DIR__ . '/Database.php';
@@ -14,14 +15,58 @@ class Task {
     }
 
     /**
+     * Compute UTC reminder timestamp from local date, time, and reminder offset
+     */
+    private function computeReminderTimeUtc(string $dueDate, ?string $dueTime, int $offsetMinutes, string $userTimezone): ?string {
+        if (empty($dueDate)) {
+            return null;
+        }
+
+        try {
+            $userTz = new DateTimeZone($userTimezone ?: 'UTC');
+            $utcTz  = new DateTimeZone('UTC');
+
+            $timePart = !empty($dueTime) ? substr($dueTime, 0, 5) : '09:00';
+            $localStr = $dueDate . ' ' . $timePart . ':00';
+
+            $dt = new DateTime($localStr, $userTz);
+
+            if ($offsetMinutes > 0) {
+                $dt->modify("-{$offsetMinutes} minutes");
+            }
+
+            $dt->setTimezone($utcTz);
+            return $dt->format('Y-m-d H:i:s');
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Helper to fetch user's saved timezone
+     */
+    private function getUserTimezone(int $userId): string {
+        if (!empty($_SESSION['timezone'])) {
+            return $_SESSION['timezone'];
+        }
+
+        $stmt = $this->db->prepare("SELECT timezone FROM users WHERE id = :id LIMIT 1");
+        $stmt->execute(['id' => $userId]);
+        $tz = $stmt->fetchColumn();
+        return $tz ?: 'UTC';
+    }
+
+    /**
      * Create a new task
      */
     public function create(int $userId, array $data): array {
-        $title       = trim($data['title'] ?? '');
-        $description = trim($data['description'] ?? '');
-        $categoryId  = !empty($data['category_id']) ? (int)$data['category_id'] : null;
-        $priority    = in_array($data['priority'] ?? '', ['low', 'medium', 'high']) ? $data['priority'] : 'medium';
-        $dueDate     = !empty($data['due_date']) ? $data['due_date'] : null;
+        $title          = trim($data['title'] ?? '');
+        $description    = trim($data['description'] ?? '');
+        $categoryId     = !empty($data['category_id']) ? (int)$data['category_id'] : null;
+        $priority       = in_array($data['priority'] ?? '', ['low', 'medium', 'high']) ? $data['priority'] : 'medium';
+        $dueDate        = !empty($data['due_date']) ? $data['due_date'] : null;
+        $dueTime        = !empty($data['due_time']) ? trim($data['due_time']) : null;
+        $reminderOffset = isset($data['reminder_offset']) ? (int)$data['reminder_offset'] : 0;
 
         if (empty($title)) {
             return ['success' => false, 'message' => 'Task title is required.'];
@@ -31,18 +76,27 @@ class Task {
             return ['success' => false, 'message' => 'Title cannot exceed 255 characters.'];
         }
 
+        // Calculate UTC reminder trigger time if due date is specified
+        $userTimezone = $this->getUserTimezone($userId);
+        $reminderTime = null;
+        if ($dueDate) {
+            $reminderTime = $this->computeReminderTimeUtc($dueDate, $dueTime, $reminderOffset, $userTimezone);
+        }
+
         $stmt = $this->db->prepare("
-            INSERT INTO tasks (user_id, category_id, title, description, priority, due_date)
-            VALUES (:user_id, :category_id, :title, :description, :priority, :due_date)
+            INSERT INTO tasks (user_id, category_id, title, description, priority, due_date, due_time, reminder_time, reminder_sent)
+            VALUES (:user_id, :category_id, :title, :description, :priority, :due_date, :due_time, :reminder_time, 0)
         ");
 
         $executed = $stmt->execute([
-            'user_id'     => $userId,
-            'category_id' => $categoryId,
-            'title'       => $title,
-            'description' => $description ?: null,
-            'priority'    => $priority,
-            'due_date'    => $dueDate
+            'user_id'       => $userId,
+            'category_id'   => $categoryId,
+            'title'         => $title,
+            'description'   => $description ?: null,
+            'priority'      => $priority,
+            'due_date'      => $dueDate,
+            'due_time'      => $dueTime ?: null,
+            'reminder_time' => $reminderTime
         ]);
 
         if ($executed) {
@@ -81,11 +135,13 @@ class Task {
             return ['success' => false, 'message' => 'Task not found or access denied.'];
         }
 
-        $title       = trim($data['title'] ?? '');
-        $description = trim($data['description'] ?? '');
-        $categoryId  = !empty($data['category_id']) ? (int)$data['category_id'] : null;
-        $priority    = in_array($data['priority'] ?? '', ['low', 'medium', 'high']) ? $data['priority'] : 'medium';
-        $dueDate     = !empty($data['due_date']) ? $data['due_date'] : null;
+        $title          = trim($data['title'] ?? '');
+        $description    = trim($data['description'] ?? '');
+        $categoryId     = !empty($data['category_id']) ? (int)$data['category_id'] : null;
+        $priority       = in_array($data['priority'] ?? '', ['low', 'medium', 'high']) ? $data['priority'] : 'medium';
+        $dueDate        = !empty($data['due_date']) ? $data['due_date'] : null;
+        $dueTime        = !empty($data['due_time']) ? trim($data['due_time']) : null;
+        $reminderOffset = isset($data['reminder_offset']) ? (int)$data['reminder_offset'] : 0;
 
         if (empty($title)) {
             return ['success' => false, 'message' => 'Task title is required.'];
@@ -95,24 +151,36 @@ class Task {
             return ['success' => false, 'message' => 'Title cannot exceed 255 characters.'];
         }
 
+        // Recompute reminder time
+        $userTimezone = $this->getUserTimezone($userId);
+        $reminderTime = null;
+        if ($dueDate) {
+            $reminderTime = $this->computeReminderTimeUtc($dueDate, $dueTime, $reminderOffset, $userTimezone);
+        }
+
         $stmt = $this->db->prepare("
             UPDATE tasks
-            SET category_id = :category_id,
-                title = :title,
-                description = :description,
-                priority = :priority,
-                due_date = :due_date
+            SET category_id   = :category_id,
+                title         = :title,
+                description   = :description,
+                priority      = :priority,
+                due_date      = :due_date,
+                due_time      = :due_time,
+                reminder_time = :reminder_time,
+                reminder_sent = 0
             WHERE id = :task_id AND user_id = :user_id
         ");
 
         $executed = $stmt->execute([
-            'category_id' => $categoryId,
-            'title'       => $title,
-            'description' => $description ?: null,
-            'priority'    => $priority,
-            'due_date'    => $dueDate,
-            'task_id'     => $taskId,
-            'user_id'     => $userId
+            'category_id'   => $categoryId,
+            'title'         => $title,
+            'description'   => $description ?: null,
+            'priority'      => $priority,
+            'due_date'      => $dueDate,
+            'due_time'      => $dueTime ?: null,
+            'reminder_time' => $reminderTime,
+            'task_id'       => $taskId,
+            'user_id'       => $userId
         ]);
 
         if ($executed) {
@@ -168,6 +236,68 @@ class Task {
     }
 
     /**
+     * Get active reminders due right now for the background scheduler
+     */
+    public function getDueReminders(int $userId): array {
+        $stmt = $this->db->prepare("
+            SELECT t.id, t.title, t.priority, t.due_date, t.due_time, t.reminder_time, c.name AS category_name
+            FROM tasks t
+            LEFT JOIN categories c ON t.category_id = c.id
+            WHERE t.user_id = :user_id
+              AND t.is_completed = 0
+              AND t.reminder_sent = 0
+              AND t.reminder_time IS NOT NULL
+              AND t.reminder_time <= UTC_TIMESTAMP()
+              AND (t.snoozed_until IS NULL OR t.snoozed_until <= UTC_TIMESTAMP())
+            ORDER BY t.reminder_time ASC
+        ");
+        $stmt->execute(['user_id' => $userId]);
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Mark reminder as sent to prevent duplicate chimes/notifications
+     */
+    public function markReminderSent(int $taskId, int $userId): bool {
+        $stmt = $this->db->prepare("
+            UPDATE tasks 
+            SET reminder_sent = 1 
+            WHERE id = :task_id AND user_id = :user_id
+        ");
+        return $stmt->execute(['task_id' => $taskId, 'user_id' => $userId]);
+    }
+
+    /**
+     * Snooze an alarm for specified minutes
+     */
+    public function snoozeTask(int $taskId, int $userId, int $minutes = 5): array {
+        $minutes = in_array($minutes, [5, 10, 15, 30]) ? $minutes : 5;
+
+        $stmt = $this->db->prepare("
+            UPDATE tasks
+            SET snoozed_until = DATE_ADD(UTC_TIMESTAMP(), INTERVAL :minutes MINUTE),
+                reminder_sent = 0
+            WHERE id = :task_id AND user_id = :user_id
+        ");
+
+        $executed = $stmt->execute([
+            'minutes' => $minutes,
+            'task_id' => $taskId,
+            'user_id' => $userId
+        ]);
+
+        if ($executed) {
+            return [
+                'success' => true,
+                'minutes' => $minutes,
+                'message' => "Alarm snoozed for {$minutes} minutes."
+            ];
+        }
+
+        return ['success' => false, 'message' => 'Failed to snooze alarm.'];
+    }
+
+    /**
      * Get paginated tasks with search and category filtering
      */
     public function getPaginated(
@@ -213,7 +343,6 @@ class Task {
         $totalPages = (int)ceil($total / $perPage);
 
         // Fetch current page data
-        // Order by is_completed ASC, FIELD(priority, 'high', 'medium', 'low'), due_date ASC, id DESC
         $sql = "
             SELECT t.*, c.name AS category_name, c.color AS category_color
             FROM tasks t
@@ -224,6 +353,7 @@ class Task {
                 FIELD(t.priority, 'high', 'medium', 'low'),
                 CASE WHEN t.due_date IS NULL THEN 1 ELSE 0 END,
                 t.due_date ASC,
+                t.due_time ASC,
                 t.id DESC
             LIMIT :offset, :per_page
         ";
@@ -287,6 +417,7 @@ class Task {
                 c.name AS category,
                 t.priority,
                 t.due_date,
+                t.due_time,
                 t.completed_at,
                 t.created_at
             FROM tasks t
@@ -298,4 +429,3 @@ class Task {
         return $stmt->fetchAll();
     }
 }
-

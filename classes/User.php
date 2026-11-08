@@ -15,9 +15,10 @@ class User {
     /**
      * Register a new user
      */
-    public function register(string $username, string $email, string $password): array {
+    public function register(string $username, string $email, string $password, string $timezone = 'UTC'): array {
         $username = trim($username);
-        $email = trim(strtolower($email));
+        $email    = trim(strtolower($email));
+        $timezone = trim($timezone) ?: 'UTC';
 
         // Validation
         if (empty($username) || empty($email) || empty($password)) {
@@ -34,6 +35,11 @@ class User {
 
         if (strlen($password) < 6) {
             return ['success' => false, 'message' => 'Password must be at least 6 characters long.'];
+        }
+
+        // Validate timezone string
+        if (!in_array($timezone, DateTimeZone::listIdentifiers(), true)) {
+            $timezone = 'UTC';
         }
 
         // Check if username or email already exists
@@ -53,14 +59,15 @@ class User {
 
         // Insert user
         $insertStmt = $this->db->prepare("
-            INSERT INTO users (username, email, password_hash)
-            VALUES (:username, :email, :password_hash)
+            INSERT INTO users (username, email, password_hash, timezone)
+            VALUES (:username, :email, :password_hash, :timezone)
         ");
 
         $executed = $insertStmt->execute([
-            'username' => $username,
-            'email' => $email,
-            'password_hash' => $passwordHash
+            'username'      => $username,
+            'email'         => $email,
+            'password_hash' => $passwordHash,
+            'timezone'      => $timezone
         ]);
 
         if ($executed) {
@@ -82,7 +89,7 @@ class User {
 
         // Find user by either email or username
         $stmt = $this->db->prepare("
-            SELECT id, username, email, password_hash, dark_mode 
+            SELECT id, username, email, password_hash, dark_mode, timezone 
             FROM users 
             WHERE email = :email_param OR username = :username_param 
             LIMIT 1
@@ -105,10 +112,11 @@ class User {
         // Prevent session fixation
         session_regenerate_id(true);
 
-        $_SESSION['user_id'] = $user['id'];
-        $_SESSION['username'] = $user['username'];
-        $_SESSION['email'] = $user['email'];
+        $_SESSION['user_id']   = (int)$user['id'];
+        $_SESSION['username']  = $user['username'];
+        $_SESSION['email']     = $user['email'];
         $_SESSION['dark_mode'] = (bool)$user['dark_mode'];
+        $_SESSION['timezone']  = $user['timezone'] ?: 'UTC';
 
         return ['success' => true, 'user' => $user];
     }
@@ -117,7 +125,7 @@ class User {
      * Find user by ID
      */
     public function findById(int $id): ?array {
-        $stmt = $this->db->prepare("SELECT id, username, email, dark_mode, created_at FROM users WHERE id = :id LIMIT 1");
+        $stmt = $this->db->prepare("SELECT id, username, email, dark_mode, timezone, created_at FROM users WHERE id = :id LIMIT 1");
         $stmt->execute(['id' => $id]);
         $user = $stmt->fetch();
         return $user ?: null;
@@ -130,7 +138,7 @@ class User {
         $stmt = $this->db->prepare("UPDATE users SET dark_mode = :dark_mode WHERE id = :id");
         $success = $stmt->execute([
             'dark_mode' => $darkMode ? 1 : 0,
-            'id' => $userId
+            'id'        => $userId
         ]);
 
         if ($success && isset($_SESSION['user_id']) && $_SESSION['user_id'] == $userId) {
@@ -139,5 +147,26 @@ class User {
 
         return $success;
     }
-}
 
+    /**
+     * Update user timezone
+     */
+    public function setTimezone(int $userId, string $timezone): bool {
+        $timezone = trim($timezone);
+        if (!in_array($timezone, DateTimeZone::listIdentifiers(), true)) {
+            return false;
+        }
+
+        $stmt = $this->db->prepare("UPDATE users SET timezone = :timezone WHERE id = :id");
+        $success = $stmt->execute([
+            'timezone' => $timezone,
+            'id'       => $userId
+        ]);
+
+        if ($success && isset($_SESSION['user_id']) && $_SESSION['user_id'] == $userId) {
+            $_SESSION['timezone'] = $timezone;
+        }
+
+        return $success;
+    }
+}
