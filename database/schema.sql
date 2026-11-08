@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS `users` (
     `email` VARCHAR(100) NOT NULL UNIQUE,
     `password_hash` VARCHAR(255) NOT NULL,
     `dark_mode` TINYINT(1) DEFAULT 0,
+    `timezone` VARCHAR(50) DEFAULT 'UTC',
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -38,6 +39,10 @@ CREATE TABLE IF NOT EXISTS `tasks` (
     `is_completed` TINYINT(1) DEFAULT 0,
     `completed_at` DATETIME NULL,
     `due_date` DATE NULL,
+    `due_time` TIME NULL,
+    `reminder_time` DATETIME NULL,
+    `reminder_sent` TINYINT(1) DEFAULT 0,
+    `snoozed_until` DATETIME NULL,
     `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT `fk_tasks_user` FOREIGN KEY (`user_id`) 
@@ -45,7 +50,8 @@ CREATE TABLE IF NOT EXISTS `tasks` (
     CONSTRAINT `fk_tasks_category` FOREIGN KEY (`category_id`) 
         REFERENCES `categories`(`id`) ON DELETE SET NULL,
     INDEX `idx_user_status` (`user_id`, `is_completed`),
-    INDEX `idx_user_title` (`user_id`, `title`)
+    INDEX `idx_user_title` (`user_id`, `title`),
+    INDEX `idx_tasks_reminder` (`user_id`, `is_completed`, `reminder_sent`, `reminder_time`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Seed default global categories
